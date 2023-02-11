@@ -25,15 +25,29 @@ def select_databese():
     return spot_data
 
 def update_databese(spot_data, detect_data):
-    spot_id = []
-
-    for i in range(len(spot_data)):
-        spot_id.append(str(spot_data[i]["id"]))
-
-    update_spots_id = ",".join(spot_id)
-    update_detect_data = ",".join(detect_data)
     cursor = CONNECTION.cursor(dictionary=True)
-    cursor.execute("UPDATE `spots` SET spots_count = ELT(FIELD(id, %s), %s) WHERE id IN (%s)" % (update_spots_id, update_detect_data, update_spots_id))
+    
+    for i in range(len(spot_data)):
+        day_list = spot_data[i]["spots_day_count"].split(",")
+        day_list.append(detect_data[i])
+        cursor.execute("UPDATE spots SET spots_count = '%s' WHERE id = %s" % (detect_data[i], spot_data[i]["id"]))
+        
+        if len(day_list) >= 25:
+            week_count = spot_data[i]["spots_week_count"] + "," + str(detect_data[i])
+            month_count = spot_data[i]["spots_month_count"] + "," + str(detect_data[i])
+            update_week_count = week_count.split(",")
+            update_month_count = month_count.split(",")
+            update_week_count.pop(0)
+            update_month_count.pop(0)
+            week_count = ",".join(update_week_count)
+            month_count = ",".join(update_month_count)
+            cursor.execute("UPDATE spots SET spots_day_count = '%s' WHERE id = %s" % (detect_data[i], spot_data[i]["id"]))
+            cursor.execute("UPDATE spots SET spots_week_count = '%s' WHERE id = %s" % (week_count, spot_data[i]["id"]))
+            cursor.execute("UPDATE spots SET spots_month_count = '%s' WHERE id = %s" % (month_count, spot_data[i]["id"]))            
+        else:
+            day_count = spot_data[i]["spots_day_count"] + "," + str(detect_data[i])
+            cursor.execute("UPDATE spots SET spots_day_count = '%s' WHERE id = %s" % (day_count, spot_data[i]["id"]))
+    
     CONNECTION.commit()
     cursor.close()
 
