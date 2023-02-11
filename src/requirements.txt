@@ -47,3 +47,5 @@ youtube_dl
 fastapi
 uvicorn
 asyncio
+mysql-connector-python
+python-dotenv
