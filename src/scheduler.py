@@ -24,13 +24,26 @@ def select_databese():
 
     return spot_data
 
-def extract_image(spot_data):
-    dir_path = 'yolov5/data/images/'
-    basename = 'camera_capture_cycle'
-    ext = 'jpg'
+def update_databese(spot_data, detect_data):
+    spot_id = []
 
-    if os.path.isdir('yolov5/data/images/'):
-        shutil.rmtree('yolov5/data/images/')
+    for i in range(len(spot_data)):
+        spot_id.append(str(spot_data[i]["id"]))
+
+    update_spots_id = ",".join(spot_id)
+    update_detect_data = ",".join(detect_data)
+    cursor = CONNECTION.cursor(dictionary=True)
+    cursor.execute("UPDATE `spots` SET spots_count = ELT(FIELD(id, %s), %s) WHERE id IN (%s)" % (update_spots_id, update_detect_data, update_spots_id))
+    CONNECTION.commit()
+    cursor.close()
+
+def extract_image(spot_data):
+    dir_path = "yolov5/data/images/"
+    basename = "camera_capture_cycle"
+    ext = "jpg"
+
+    if os.path.isdir(dir_path):
+        shutil.rmtree(dir_path)
 
     for i in range(len(spot_data)):
         video = pafy.new(spot_data[i]["spots_url"])
@@ -46,15 +59,20 @@ def extract_image(spot_data):
         cv2.imwrite('{}_{}.{}'.format(base_path, datetime.datetime.now().strftime('%Y%m%d%H%M%S%f'), ext), frame)
 
 def detect_image():
+    dir_path = "yolov5/runs/"
+
+    if os.path.isdir(dir_path):
+        shutil.rmtree(dir_path)
+
     proc = subprocess.run(["python", "yolov5/detect.py"], stdout=PIPE, stderr=PIPE)
-    proc_str = proc.stdout.decode("utf-8").split()
-    proc_int = [int(i) for i in proc_str]
-    shutil.rmtree("yolov5/runs")
-    print(proc_int)
+    proc_data = proc.stdout.decode("utf-8").split()
+    
+    return proc_data
 
 def main():
     spot_data = select_databese()
     extract_image(spot_data)
-    detect_image()
+    detect_data = detect_image()
+    update_databese(spot_data, detect_data)
 
 main()
